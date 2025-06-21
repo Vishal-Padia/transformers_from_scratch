@@ -11,7 +11,7 @@ from datasets import load_dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
-from tokenizers.pre_tokenizers import WhiteSpace
+from tokenizers.pre_tokenizers import Whitespace
 
 from pathlib import Path
 from tqdm import tqdm
@@ -29,7 +29,7 @@ def get_or_build_tokenizer(config, ds, lang):
     tokenizer_path = Path(config["tokenizer_file"].format(lang))
     if not Path.exists(tokenizer_path):
         tokenzier = Tokenizer(WordLevel(unk_token="[UNK]"))
-        tokenzier.pre_tokenizer = WhiteSpace()
+        tokenzier.pre_tokenizer = Whitespace()
         trainer = WordLevelTrainer(
             special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]"], min_frequency=2
         )
@@ -47,7 +47,7 @@ def get_ds(config):
 
     # build tokenzier
     tokenizer_src = get_or_build_tokenizer(config, ds_raw, config["lang_src"])
-    tokenizer_tgt = get_or_build_tokenizer(config, ds_raw, config["lang_dst"])
+    tokenizer_tgt = get_or_build_tokenizer(config, ds_raw, config["lang_tgt"])
 
     # keep 90% for training and 10% for validation
     train_ds_size = int(0.9 * len(ds_raw))
@@ -111,7 +111,7 @@ def train_model(config):
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
     model = get_model(
         config, tokenizer_src.get_vocab_size(), tokenizer_tgt.get_vocab_size()
-    ).to_(device)
+    ).to(device)
 
     # tensorboard
     write = SummaryWriter(config["experiment_name"])
@@ -159,7 +159,7 @@ def train_model(config):
             loss = loss_fn(
                 proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1)
             )
-            batch_iterator.set_postfix({f"{loss.item():6.3f}"})
+            batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
 
             # log the loss
             write.add_scalar("train loss", loss.item(), global_step)
